@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { WHOP_PLATFORM_COMPANY_ID } from "@/lib/whop";
 import { handleWebhookEvent, reconcileOrder } from "@/lib/webhooks/process";
+import { releasePendingPayouts } from "@/lib/payouts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
  */
 async function run() {
   const admin = createSupabaseAdmin();
-  const result = { retried: 0, reconciled: 0 };
+  const result = { retried: 0, reconciled: 0, payouts: { released: 0, frozen: 0, held: 0 } };
 
   // A. retry failed webhook events
   const { data: jobs } = await admin
@@ -72,6 +73,9 @@ async function run() {
       /* best-effort */
     }
   }
+
+  // C. release payouts past their reserve window (gated on freeze + readiness)
+  result.payouts = await releasePendingPayouts(admin);
 
   return result;
 }

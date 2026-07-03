@@ -17,7 +17,16 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 | 3 | Listings — product + plan, public marketplace | ✅ done, verified end-to-end |
 | 4 | Buyer checkout — order row + checkout session + embedded checkout | ✅ done, session verified |
 | 5 | Webhooks + order state machine + reconciliation | ✅ done, verified end-to-end |
-| 6–8 | payouts, dashboard, polish | ⏳ planned |
+| 6 | Seller payout — reserve/hold, readiness-gated, idempotent, dispute-frozen | ✅ done, verified end-to-end |
+| 7–8 | ops dashboard, polish | ⏳ planned |
+
+## Seller payout (Chunk 6)
+
+- On order **PAID**, a payout **intent** row is recorded (idempotent on `whop_payment_id` — mirrors Whop transfer idempotence). Amount = order total − platform fee (20%).
+- The cron **releases** payouts only after a **reserve/hold window** (clawback safety), and **never** while the order is `DISPUTED`/`REFUNDED` (frozen → `failed`). Real releases require seller readiness (Verification `approved` + payout account `connected`).
+- **Sandbox**: real payouts are disabled (`transfers.create` → 400 *"Sends are only supported from an Ethereum wallet"*), so releases are **stubbed** (`status: stubbed`) behind `PAYOUTS_ENABLED=false`; production runs `whop.transfers.create` platform → seller ledger with `idempotence_key`.
+- Sellers see payouts + live Whop ledger balance on `/seller`.
+- Verified end-to-end: intent idempotency, reserve hold, release→stubbed, dispute→frozen.
 
 ## Webhooks & order state (Chunk 5)
 

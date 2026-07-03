@@ -3,8 +3,11 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 import { startSellerOnboarding } from "./actions";
+import { computeReadiness } from "@/lib/sellers";
 
 export const dynamic = "force-dynamic";
+
+const usd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 export default async function SellerPage({
   searchParams,
@@ -27,6 +30,17 @@ export default async function SellerPage({
   const hasCompany = Boolean(seller?.whop_company_id);
   const kyc = seller?.kyc_status ?? "pending";
   const payoutReady = seller?.payout_ready ?? false;
+
+  // Earnings: our payout ledger (RLS: seller reads own) + live Whop balance.
+  const { data: payouts } = seller
+    ? await supabase
+        .from("payouts")
+        .select("id, amount_cents, status, created_at")
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  const withdrawable = seller?.whop_company_id
+    ? (await computeReadiness(seller.whop_company_id)).withdrawable
+    : null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 p-6">
@@ -87,6 +101,32 @@ export default async function SellerPage({
         <p className="mt-2 text-xs text-gray-400">
           You&apos;ll be redirected to Whop&apos;s hosted KYC. Returning here does not by
           itself mean KYC passed — we re-check readiness against Whop on return.
+        </p>
+      </section>
+
+      <section className="rounded-lg border p-4">
+        <h2 className="font-medium">Earnings</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Withdrawable balance (Whop ledger):{" "}
+          <strong>{withdrawable != null ? usd(withdrawable) : "—"}</strong>
+        </p>
+        <ul className="mt-3 space-y-1 text-sm">
+          {(payouts ?? []).length === 0 ? (
+            <li className="text-gray-500">No payouts yet — sell something!</li>
+          ) : (
+            payouts!.map((p) => (
+              <li key={p.id} className="flex justify-between">
+                <span>{usd(p.amount_cents)}</span>
+                <span className="text-gray-500">
+                  {p.status === "stubbed" ? "released (sandbox stub)" : p.status}
+                </span>
+              </li>
+            ))
+          )}
+        </ul>
+        <p className="mt-2 text-xs text-gray-400">
+          Payouts are held for a reserve window, then released (real transfers in
+          production; simulated in sandbox). Frozen automatically on dispute/refund.
         </p>
       </section>
     </main>

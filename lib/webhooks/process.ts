@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { whop } from "@/lib/whop";
 import type { Database, OrderStatus } from "@/lib/database.types";
 import { nextStatus, paymentToTarget } from "@/lib/webhooks/state";
+import { ensurePayoutForOrder } from "@/lib/payouts";
 
 type Admin = SupabaseClient<Database>;
 
@@ -24,7 +25,9 @@ async function advanceOrder(
   admin: Admin,
   args: { orderId?: string; whopPaymentId: string; membershipId?: string | null; target: OrderStatus | null },
 ) {
-  let q = admin.from("orders").select("id, status, whop_payment_id, whop_membership_id");
+  const q = admin
+    .from("orders")
+    .select("id, status, whop_payment_id, whop_membership_id, seller_id, amount_cents, application_fee_cents");
   const { data: order } = args.orderId
     ? await q.eq("id", args.orderId).maybeSingle()
     : await q.eq("whop_payment_id", args.whopPaymentId).maybeSingle();
@@ -35,12 +38,28 @@ async function advanceOrder(
   if (!order.whop_payment_id) patch.whop_payment_id = args.whopPaymentId;
   if (args.membershipId && !order.whop_membership_id) patch.whop_membership_id = args.membershipId;
 
+  let finalStatus = order.status;
   if (args.target) {
     const advanced = nextStatus(order.status, args.target);
-    if (advanced) patch.status = advanced;
+    if (advanced) {
+      patch.status = advanced;
+      finalStatus = advanced;
+    }
   }
   if (Object.keys(patch).length > 0) {
     await admin.from("orders").update(patch).eq("id", order.id);
+  }
+
+  // On PAID, record payout intent (idempotent). Funds are released later, after
+  // the reserve window and readiness/freeze checks (lib/payouts.ts).
+  if (finalStatus === "PAID") {
+    await ensurePayoutForOrder(admin, {
+      id: order.id,
+      seller_id: order.seller_id,
+      amount_cents: order.amount_cents,
+      application_fee_cents: order.application_fee_cents,
+      whop_payment_id: order.whop_payment_id ?? args.whopPaymentId,
+    });
   }
 }
 
