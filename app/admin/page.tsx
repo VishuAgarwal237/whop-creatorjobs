@@ -38,15 +38,26 @@ export default async function AdminPage() {
   }
 
   const admin = createSupabaseAdmin();
-  const [{ data: orders }, { data: payouts }, { data: events }, ordersTotal, paidTotal, payoutTotal, whErrTotal] =
-    await Promise.all([
+  const [
+    { data: orders },
+    { data: payouts },
+    { data: events },
+    { data: activity },
+    ordersTotal,
+    paidTotal,
+    payoutTotal,
+    whErrTotal,
+    deadJobsTotal,
+  ] = await Promise.all([
       admin.from("orders").select("id, status, amount_cents, whop_payment_id, listing_id, created_at").order("created_at", { ascending: false }).limit(20),
       admin.from("payouts").select("id, order_id, amount_cents, status, error_code, whop_transfer_id").order("created_at", { ascending: false }).limit(20),
       admin.from("webhook_events").select("whop_webhook_id, event_type, signature_verified, processed_at, process_error, received_at").order("received_at", { ascending: false }).limit(20),
+      admin.from("order_events").select("id, order_id, from_status, to_status, reason, source, created_at").order("created_at", { ascending: false }).limit(20),
       admin.from("orders").select("*", { count: "exact", head: true }),
       admin.from("orders").select("*", { count: "exact", head: true }).in("status", PAID_PLUS),
       admin.from("payouts").select("*", { count: "exact", head: true }).in("status", ["completed", "stubbed"]),
       admin.from("webhook_events").select("*", { count: "exact", head: true }).not("process_error", "is", null),
+      admin.from("outbox_jobs").select("*", { count: "exact", head: true }).eq("status", "failed"),
     ]);
 
   const listingIds = Array.from(new Set((orders ?? []).map((o) => o.listing_id)));
@@ -77,11 +88,12 @@ export default async function AdminPage() {
         }
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Kpi label="Orders" value={ordersTotal.count ?? 0} />
         <Kpi label="Paid+" value={paidTotal.count ?? 0} />
         <Kpi label="Payouts released" value={payoutTotal.count ?? 0} />
         <Kpi label="Webhook errors" value={whErrTotal.count ?? 0} tone={(whErrTotal.count ?? 0) > 0 ? "danger" : undefined} />
+        <Kpi label="Dead-letter jobs" value={deadJobsTotal.count ?? 0} tone={(deadJobsTotal.count ?? 0) > 0 ? "danger" : undefined} />
       </div>
 
       <div className="flex flex-col gap-6">
@@ -172,6 +184,33 @@ export default async function AdminPage() {
                       <td className={td}>{e.signature_verified ? "✅" : "❌"}</td>
                       <td className={td}>{e.processed_at ? "✅" : "⏳"}</td>
                       <td className={`${td} text-[var(--danger)]`}>{e.process_error ? e.process_error.slice(0, 40) : "—"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Order activity — state-transition audit trail (why an order is where it is) */}
+        <Card className="p-0">
+          <h2 className="border-b border-border px-5 py-3 font-semibold">Order activity</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-border bg-surface">
+                <tr><th className={th}>When</th><th className={th}>Order</th><th className={th}>Transition</th><th className={th}>Reason</th><th className={th}>Source</th></tr>
+              </thead>
+              <tbody>
+                {(activity ?? []).length === 0 ? (
+                  <tr><td className={`${td} text-muted`} colSpan={5}>No transitions recorded yet.</td></tr>
+                ) : (
+                  activity!.map((a) => (
+                    <tr key={a.id} className="border-b border-border last:border-0">
+                      <td className={`${td} text-muted`}>{new Date(a.created_at).toLocaleString()}</td>
+                      <td className={`${td} font-mono text-muted`}>{short(a.order_id)}</td>
+                      <td className={`${td} font-mono`}>{`${a.from_status ?? "—"} → ${a.to_status}`}</td>
+                      <td className={`${td} text-muted`}>{a.reason}</td>
+                      <td className={`${td} text-muted`}>{a.source}</td>
                     </tr>
                   ))
                 )}

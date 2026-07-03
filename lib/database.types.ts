@@ -15,6 +15,8 @@ export type KycStatus = "pending" | "approved" | "rejected";
 export type ListingStatus = "draft" | "active" | "archived";
 export type PayoutStatus = "pending" | "in_transit" | "completed" | "failed" | "stubbed";
 export type JobStatus = "pending" | "processing" | "done" | "failed";
+/** Who/what advanced an order, recorded on every order_events audit row. */
+export type OrderEventSource = "webhook" | "cron" | "reconcile" | "manual";
 
 type Timestamps = { created_at: string };
 type Rel = { Relationships: [] };
@@ -101,6 +103,29 @@ export interface Database {
           application_fee_cents?: number;
         };
         Update: Partial<Database["public"]["Tables"]["orders"]["Insert"]>;
+      } & Rel;
+      order_events: {
+        Row: {
+          id: string;
+          order_id: string;
+          from_status: OrderStatus | null;
+          to_status: OrderStatus;
+          reason: string;
+          source: OrderEventSource;
+          detail: unknown | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          from_status?: OrderStatus | null;
+          to_status: OrderStatus;
+          reason: string;
+          source: OrderEventSource;
+          detail?: unknown | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["order_events"]["Insert"]>;
       } & Rel;
       payouts: {
         Row: {

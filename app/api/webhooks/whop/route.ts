@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { whop } from "@/lib/whop";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { handleWebhookEvent, OrderNotFoundError } from "@/lib/webhooks/process";
+import { log } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,19 +25,27 @@ export async function POST(request: NextRequest) {
   const headers: Record<string, string> = {};
   request.headers.forEach((v, k) => (headers[k] = v));
 
+  const startedAt = Date.now();
+  const webhookId = headers["webhook-id"];
+
   // 1. verify signature
   let event: unknown;
   try {
     event = whop.webhooks.unwrap(body, { headers });
-  } catch {
+  } catch (e) {
+    log.warn("webhook.invalid_signature", { webhook_id: webhookId, err: e });
     return NextResponse.json({ ok: false, error: "invalid signature" }, { status: 400 });
   }
 
-  const webhookId = headers["webhook-id"];
-  if (!webhookId) return NextResponse.json({ ok: false, error: "missing webhook-id" }, { status: 400 });
+  if (!webhookId) {
+    log.warn("webhook.missing_id");
+    return NextResponse.json({ ok: false, error: "missing webhook-id" }, { status: 400 });
+  }
 
   const admin = createSupabaseAdmin();
   const eventType = (event as { type?: string }).type ?? "unknown";
+  const wlog = log.child({ webhook_id: webhookId, event_type: eventType });
+  wlog.info("webhook.received");
 
   // 2. dedupe
   const { error: insErr } = await admin.from("webhook_events").insert({
@@ -46,7 +55,11 @@ export async function POST(request: NextRequest) {
     signature_verified: true,
   });
   if (insErr) {
-    if (insErr.code === "23505") return NextResponse.json({ ok: true, deduped: true }); // already seen
+    if (insErr.code === "23505") {
+      wlog.info("webhook.deduped");
+      return NextResponse.json({ ok: true, deduped: true }); // already seen
+    }
+    wlog.error("webhook.persist_failed", { err: insErr.message });
     return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
   }
 
@@ -63,10 +76,14 @@ export async function POST(request: NextRequest) {
       .update({ processed_at: new Date().toISOString(), process_error: null })
       .eq("whop_webhook_id", webhookId);
     await admin.from("outbox_jobs").update({ status: "done" }).eq("kind", "webhook").eq("ref_id", webhookId);
+    wlog.info("webhook.processed", { latency_ms: Date.now() - startedAt });
   } catch (e) {
     const msg = e instanceof OrderNotFoundError ? `order not found yet: ${e.message}` : String(e);
     await admin.from("webhook_events").update({ process_error: msg }).eq("whop_webhook_id", webhookId);
     // job stays pending → cron retries with backoff
+    // OrderNotFoundError is an expected race (webhook before order commit) → warn, not error.
+    if (e instanceof OrderNotFoundError) wlog.warn("webhook.deferred", { reason: msg, latency_ms: Date.now() - startedAt });
+    else wlog.error("webhook.process_failed", { err: e, latency_ms: Date.now() - startedAt });
   }
 
   return NextResponse.json({ ok: true });

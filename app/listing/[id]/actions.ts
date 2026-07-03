@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { Whop } from "@/lib/whop";
 import { createCheckoutSession, platformFeeCents } from "@/lib/checkout";
+import { log } from "@/lib/logger";
 
 /**
  * Start checkout for a listing (Chunk 4):
@@ -64,7 +65,11 @@ export async function startCheckout(formData: FormData) {
     })
     .select("id")
     .single();
-  if (oErr) redirect(`/listing/${listingId}?error=${encodeURIComponent(oErr.message)}`);
+  if (oErr) {
+    log.error("checkout.order_insert_failed", { listing_id: listingId, err: oErr.message });
+    redirect(`/listing/${listingId}?error=${encodeURIComponent(oErr.message)}`);
+  }
+  log.info("checkout.order_created", { order_id: order!.id, listing_id: listingId, amount_cents: listing!.price_cents });
 
   // create the Whop checkout session
   let sessionId: string | null = null;
@@ -74,6 +79,7 @@ export async function startCheckout(formData: FormData) {
     sessionId = s.sessionId;
   } catch (e) {
     err = e instanceof Whop.APIError ? `(${e.status}) ${e.message}` : "Failed to start checkout.";
+    log.error("checkout.session_create_failed", { order_id: order!.id, listing_id: listingId, err: e });
   }
   if (err) redirect(`/listing/${listingId}?error=${encodeURIComponent(err)}`);
 
