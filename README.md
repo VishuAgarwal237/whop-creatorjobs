@@ -7,7 +7,7 @@ payouts, and the ops dashboard.
 Stack: **Next.js 16 (App Router) + Supabase (Postgres/Auth/RLS) + Whop TS SDK (`@whop/sdk`)**.
 Design principle: **Whop is the source of truth for money; our Postgres is a read-model + workflow layer.**
 
-**Submission:** [SCENARIOS.md](./SCENARIOS.md) (the four written answers) · [DEPLOY.md](./DEPLOY.md) (Vercel + cloud Supabase) · Loom (pending).
+**Submission:** [SCENARIOS.md](./SCENARIOS.md) (the four written answers) · [LIMITATIONS.md](./LIMITATIONS.md) (sandbox limits + mocks/adaptations) · [DEPLOY.md](./DEPLOY.md) (Vercel + cloud Supabase) · Loom (pending).
 
 ### The six Whop-powered capabilities → where they live
 
