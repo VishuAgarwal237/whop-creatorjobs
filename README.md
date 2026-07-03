@@ -7,6 +7,19 @@ payouts, and the ops dashboard.
 Stack: **Next.js 16 (App Router) + Supabase (Postgres/Auth/RLS) + Whop TS SDK (`@whop/sdk`)**.
 Design principle: **Whop is the source of truth for money; our Postgres is a read-model + workflow layer.**
 
+**Submission:** [SCENARIOS.md](./SCENARIOS.md) (the four written answers) · [DEPLOY.md](./DEPLOY.md) (Vercel + cloud Supabase) · Loom (pending).
+
+### The six Whop-powered capabilities → where they live
+
+| Capability | In the app | Whop API |
+|---|---|---|
+| Seller onboarding | `/seller` | `companies.create`, `account-links` |
+| Buyer checkout | `/listing/[id]` → `/checkout` | `checkout-configurations` + `<WhopCheckoutEmbed>` |
+| Payment confirmation | `/api/webhooks/whop` | `webhooks.unwrap` + `payments.retrieve` |
+| Order state | `/orders`, `/admin` | payment status → state machine |
+| Seller payout setup | `/seller` (earnings) | `ledger_accounts`, `transfers` |
+| Marketplace dashboard | `/admin` | `payments`, `withdrawals`, `ledger_accounts` |
+
 ## Build status
 
 | Chunk | What | Status |
@@ -19,7 +32,9 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 | 5 | Webhooks + order state machine + reconciliation | ✅ done, verified end-to-end |
 | 6 | Seller payout — reserve/hold, readiness-gated, idempotent, dispute-frozen | ✅ done, verified end-to-end |
 | 7 | Ops dashboard `/admin` — payments, order state, payouts, webhook delivery | ✅ done |
-| 8 | polish / deploy / scenarios / Loom | ⏳ planned |
+| 8 | Polish — design pass, scenario answers, deploy guide (sandbox) | ✅ done (Loom pending) |
+
+**Submission checklist:** ✅ GitHub repo · ✅ [scenario answers](./SCENARIOS.md) · ✅ [deploy guide](./DEPLOY.md) (sandbox) · ⏳ Loom · ⏳ public Vercel link (optional; keep sandbox config).
 
 ## Ops dashboard (Chunk 7 — Scenario 4)
 
