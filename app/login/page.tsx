@@ -3,9 +3,9 @@ import { signIn, signUp } from "./actions";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-6">
@@ -19,6 +19,7 @@ export default async function LoginPage({
       ) : null}
 
       <form className="flex flex-col gap-3">
+        <input type="hidden" name="next" value={next ?? ""} />
         <label className="flex flex-col gap-1 text-sm">
           Email
           <input

@@ -1,26 +1,36 @@
 @import "tailwindcss";
 
 :root {
+  /* Whop-inspired palette */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0d0d0f;
+  --muted: #6b7280;
+  --border: #ececee;
+  --surface: #f7f7f8;
+  --whop-orange: #f4531f;
+  --whop-orange-strong: #e6420f;
+  --whop-blue: #2563eb;
+  --whop-blue-hover: #1d4ed8;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+  --color-whop-orange: var(--whop-orange);
+  --color-whop-orange-strong: var(--whop-orange-strong);
+  --color-whop-blue: var(--whop-blue);
+  --color-whop-blue-hover: var(--whop-blue-hover);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }

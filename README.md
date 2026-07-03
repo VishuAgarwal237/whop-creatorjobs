@@ -14,7 +14,16 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 | 0 | Scaffold + server-only Whop client + `/api/health` smoke test | ✅ done (see note) |
 | 1 | Supabase schema + Auth + RLS + typed clients | ✅ done, validated on real Postgres |
 | 2 | Seller onboarding — auth, connected account, KYC link, readiness re-check | ✅ done, verified end-to-end |
-| 3–8 | listings, checkout, webhooks, payouts, dashboard, polish | ⏳ planned |
+| 3 | Listings — product + plan, public marketplace | ✅ done, verified end-to-end |
+| 4 | Buyer checkout — order row + checkout session + embedded checkout | ✅ done, session verified |
+| 5–8 | webhooks/order state, payouts, dashboard, polish | ⏳ planned |
+
+## Buyer checkout (Chunk 4)
+
+- On a listing, **Buy now** (buyer must be signed in) creates the `orders` row **first** (`PENDING_PAYMENT`) — so a webhook can never beat the order into existence (§X1) — then a Whop **checkout session** carrying `metadata.order_id`.
+- `/checkout/[orderId]` renders Whop's **`<WhopCheckoutEmbed environment="sandbox">`** (drop-in UI). Test card `4242 4242 4242 4242`.
+- Catalog lives under the platform company, so checkout is created under the platform; the seller's cut (`amount − application_fee`, 20%) is transferred to their connected ledger at payout (Chunk 6).
+- The return page shows "submitted" — the order flips to **PAID only** on the verified `payment.succeeded` webhook (Chunk 5), never from `?status=success`.
 
 ## Seller onboarding (Chunk 2)
 
