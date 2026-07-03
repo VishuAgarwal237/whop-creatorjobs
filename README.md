@@ -18,7 +18,15 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 | 4 | Buyer checkout — order row + checkout session + embedded checkout | ✅ done, session verified |
 | 5 | Webhooks + order state machine + reconciliation | ✅ done, verified end-to-end |
 | 6 | Seller payout — reserve/hold, readiness-gated, idempotent, dispute-frozen | ✅ done, verified end-to-end |
-| 7–8 | ops dashboard, polish | ⏳ planned |
+| 7 | Ops dashboard `/admin` — payments, order state, payouts, webhook delivery | ✅ done |
+| 8 | polish / deploy / scenarios / Loom | ⏳ planned |
+
+## Ops dashboard (Chunk 7 — Scenario 4)
+
+- `/admin` (service role; gated by `ADMIN_EMAILS` allowlist) shows it all on one screen:
+  **orders** with our status + **live `GET /payments/{id}` status/substatus** and a mismatch flag + per-row **re-check**; **payouts** (status, transfer id, error); **webhook delivery** (event, signature verified, processed, error).
+- A **Run reconciliation** button triggers the same idempotent sweep as the cron (`lib/ops.ts` → outbox drain + stuck-order heal + payout release).
+- Answers the customer's ask: "one dashboard showing buyer payment, order state, seller payout status, webhook delivery, and errors."
 
 ## Seller payout (Chunk 6)
 

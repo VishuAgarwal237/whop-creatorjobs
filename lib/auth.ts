@@ -9,3 +9,13 @@ export async function getCurrentUser() {
   } = await supabase.auth.getUser();
   return user;
 }
+
+/** Ops-dashboard allowlist. Comma-separated emails in ADMIN_EMAILS. */
+export function isAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const allow = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return allow.includes(email.toLowerCase());
+}

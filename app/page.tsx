@@ -32,6 +32,8 @@ const links = [
   },
   { href: "/login", label: "Seller sign in / sign up" },
   { href: "/seller", label: "Seller dashboard" },
+  { href: "/orders", label: "My orders (buyer)" },
+  { href: "/admin", label: "Ops dashboard (admin)" },
   { href: "/api/health", label: "API health / Whop connectivity" },
 ];
 
@@ -117,8 +119,8 @@ export default function Home() {
           </nav>
 
           <p className="mt-8 text-xs leading-relaxed text-muted/80">
-            Chunks 0–2 complete: scaffold + Whop client, Supabase schema + RLS,
-            seller onboarding with real connected accounts.
+            Chunks 0–7 complete: onboarding, listings, checkout, webhooks + order
+            state, payouts, and the ops dashboard — all on Whop APIs.
           </p>
         </div>
       </main>
