@@ -25,6 +25,12 @@ export const WHOP_API_VERSION_DATE =
 export const WHOP_ENV: "sandbox" | "production" =
   WHOP_API_BASE.includes("sandbox") ? "sandbox" : "production";
 
+/** CreatorJobs' own (parent) company. Connected sellers are created under it. */
+export const WHOP_PLATFORM_COMPANY_ID = process.env.WHOP_PLATFORM_COMPANY_ID ?? "";
+
+/** Public base URL, for building Whop return/refresh redirect links. */
+export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const whop = new Whop({
   apiKey: process.env.WHOP_API_KEY,
   // The Standard Webhooks verifier expects the base64 secret; the SDK reads

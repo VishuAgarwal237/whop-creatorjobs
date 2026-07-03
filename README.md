@@ -13,7 +13,16 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 |------|------|--------|
 | 0 | Scaffold + server-only Whop client + `/api/health` smoke test | ✅ done (see note) |
 | 1 | Supabase schema + Auth + RLS + typed clients | ✅ done, validated on real Postgres |
-| 2–8 | onboarding, listings, checkout, webhooks, payouts, dashboard, polish | ⏳ planned |
+| 2 | Seller onboarding — auth, connected account, KYC link, readiness re-check | ✅ done, verified end-to-end |
+| 3–8 | listings, checkout, webhooks, payouts, dashboard, polish | ⏳ planned |
+
+## Seller onboarding (Chunk 2)
+
+- `/login` — Supabase email auth (sign in / sign up). `/seller` — onboarding dashboard (auth-guarded).
+- On start: ensure a `sellers` row (dedupe-first), create a **connected account** (`companies.create` with `parent_company_id`), then mint a hosted KYC link (`account-links`).
+- **`account-links` requires https return/refresh URLs**, so hosted KYC runs on the deployed (https) build; on local http the connected account still creates and we skip the redirect.
+- Readiness (`kyc_status`, `payout_ready`) is **always re-checked against Whop's ledger** (`payments_approval_status` + payout-account `connected`) — never inferred from the return redirect. In sandbox this stays `pending` (payouts disabled) — the real Scenario 2.
+- Verified end-to-end: signup → RLS-guarded seller insert → connected account → readiness re-check → cross-user isolation (0 leak).
 
 ## ⚠️ API key note (Scenario 3, live)
 

@@ -17,6 +17,7 @@ export type PayoutStatus = "pending" | "in_transit" | "completed" | "failed" | "
 export type JobStatus = "pending" | "processing" | "done" | "failed";
 
 type Timestamps = { created_at: string };
+type Rel = { Relationships: [] };
 
 export interface Database {
   public: {
@@ -40,12 +41,12 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["sellers"]["Insert"]>;
-      };
+      } & Rel;
       buyers: {
         Row: { id: string; supabase_user_id: string; email: string } & Timestamps;
         Insert: { id?: string; supabase_user_id: string; email: string; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["buyers"]["Insert"]>;
-      };
+      } & Rel;
       listings: {
         Row: {
           id: string;
@@ -71,7 +72,7 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["listings"]["Insert"]>;
-      };
+      } & Rel;
       orders: {
         Row: {
           id: string;
@@ -100,7 +101,7 @@ export interface Database {
           application_fee_cents?: number;
         };
         Update: Partial<Database["public"]["Tables"]["orders"]["Insert"]>;
-      };
+      } & Rel;
       payouts: {
         Row: {
           id: string;
@@ -126,7 +127,7 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["payouts"]["Insert"]>;
-      };
+      } & Rel;
       webhook_events: {
         Row: {
           id: string;
@@ -149,7 +150,7 @@ export interface Database {
           process_error?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["webhook_events"]["Insert"]>;
-      };
+      } & Rel;
       outbox_jobs: {
         Row: {
           id: string;
@@ -172,7 +173,7 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["outbox_jobs"]["Insert"]>;
-      };
+      } & Rel;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

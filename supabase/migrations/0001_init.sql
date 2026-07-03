@@ -168,3 +168,17 @@ create policy orders_participant_read on orders
 create policy payouts_seller_read on payouts
   for select to authenticated
   using (seller_id in (select id from sellers where supabase_user_id = auth.uid()));
+
+-- ---------- role grants ----------
+-- Supabase configures sensible default privileges, but we grant explicitly so the
+-- migration is portable and the intent is auditable. RLS (above) is the row-level
+-- gate; these are the table-level privileges it sits on top of.
+grant usage on schema public to anon, authenticated;
+-- users manage their own identity + a seller's own catalog
+grant select, insert, update, delete on sellers, buyers, listings to authenticated;
+-- orders/payouts are readable by participants; writes happen via the service role
+grant select on orders, payouts to authenticated;
+-- the public marketplace lists active listings to logged-out visitors
+grant select on listings to anon;
+-- webhook_events + outbox_jobs: intentionally NO grants to anon/authenticated
+-- (service role only — it bypasses RLS).
