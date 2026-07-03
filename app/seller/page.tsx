@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
@@ -31,9 +32,14 @@ export default async function SellerPage({
     <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 p-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Seller dashboard</h1>
-        <form action={signOut}>
-          <button className="text-sm text-gray-500 underline">Sign out</button>
-        </form>
+        <div className="flex items-center gap-4">
+          <Link href="/seller/listings" className="text-sm text-blue-600 underline">
+            My listings
+          </Link>
+          <form action={signOut}>
+            <button className="text-sm text-gray-500 underline">Sign out</button>
+          </form>
+        </div>
       </header>
       <p className="text-sm text-gray-500">Signed in as {user.email}</p>
 

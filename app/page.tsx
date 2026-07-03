@@ -10,6 +10,9 @@ export default function Home() {
         </p>
       </div>
       <nav className="flex flex-col gap-2 text-sm">
+        <Link className="text-blue-600 underline" href="/marketplace">
+          Browse the marketplace →
+        </Link>
         <Link className="text-blue-600 underline" href="/login">
           Seller sign in / sign up →
         </Link>
