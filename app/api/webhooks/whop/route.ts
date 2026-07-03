@@ -13,9 +13,11 @@ export const dynamic = "force-dynamic";
  *    also enforces the timestamp tolerance (replay protection). Bad sig → 400.
  * 2. DEDUPE on the `webhook-id` header (webhook_events UNIQUE) — at-least-once
  *    delivery means we may see an event twice.
- * 3. PROCESS best-effort inline (idempotent + monotonic). If the order isn't in
- *    our DB yet (webhook-before-order race), leave an outbox job for the cron to
- *    retry, and still return 2xx so Whop doesn't hammer us.
+ * 3. ENQUEUE a durable outbox job BEFORE processing, so a crash/timeout mid-
+ *    processing can't orphan the event — the cron always drains it.
+ * 4. PROCESS best-effort inline (idempotent + monotonic) as a latency optimization;
+ *    on success mark the event processed and the job done. Always return 2xx once
+ *    the event is durably recorded so Whop doesn't hammer us.
  */
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -48,17 +50,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: insErr.message }, { status: 500 });
   }
 
-  // 3. process inline (best-effort); durable retry via outbox on failure
+  // 3. durable enqueue BEFORE processing — guarantees the cron can recover the
+  //    event even if this request crashes/times out mid-processing.
+  await admin.from("outbox_jobs").insert({ kind: "webhook", ref_id: webhookId });
+
+  // 4. process inline (optimization). On success, mark processed + close the job;
+  //    on failure, leave the job pending for the reconciliation cron to retry.
   try {
     await handleWebhookEvent(admin, event);
     await admin
       .from("webhook_events")
-      .update({ processed_at: new Date().toISOString() })
+      .update({ processed_at: new Date().toISOString(), process_error: null })
       .eq("whop_webhook_id", webhookId);
+    await admin.from("outbox_jobs").update({ status: "done" }).eq("kind", "webhook").eq("ref_id", webhookId);
   } catch (e) {
     const msg = e instanceof OrderNotFoundError ? `order not found yet: ${e.message}` : String(e);
     await admin.from("webhook_events").update({ process_error: msg }).eq("whop_webhook_id", webhookId);
-    await admin.from("outbox_jobs").insert({ kind: "webhook", ref_id: webhookId });
+    // job stays pending → cron retries with backoff
   }
 
   return NextResponse.json({ ok: true });
