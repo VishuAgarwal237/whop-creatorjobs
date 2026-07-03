@@ -16,7 +16,17 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 | 2 | Seller onboarding — auth, connected account, KYC link, readiness re-check | ✅ done, verified end-to-end |
 | 3 | Listings — product + plan, public marketplace | ✅ done, verified end-to-end |
 | 4 | Buyer checkout — order row + checkout session + embedded checkout | ✅ done, session verified |
-| 5–8 | webhooks/order state, payouts, dashboard, polish | ⏳ planned |
+| 5 | Webhooks + order state machine + reconciliation | ✅ done, verified end-to-end |
+| 6–8 | payouts, dashboard, polish | ⏳ planned |
+
+## Webhooks & order state (Chunk 5)
+
+- `POST /api/webhooks/whop`: **verify** (`webhooks.unwrap` — Standard Webhooks sig + timestamp/replay) → **dedupe** on `webhook-id` (`webhook_events` UNIQUE) → **process** inline (idempotent, monotonic) → 2xx. Bad signature → 400.
+- **Webhook = signal, API = truth**: `payment.*` events re-read `GET /payments/{id}` before advancing the order (`PENDING_PAYMENT→PROCESSING→PAID`). Monotonic — a late `payment.pending` never regresses a `PAID` order. `refund/dispute` freeze the order (`REFUNDED`/`DISPUTED`).
+- **Webhook-before-order race**: if the order isn't in our DB yet, the event is stored with a `process_error` + an `outbox_jobs` entry; the reconciliation cron retries and heals it.
+- `GET /api/cron` (Vercel Cron, every minute — `vercel.json`): drains the outbox and self-heals orders stuck in `PENDING_PAYMENT/PROCESSING` by reading the payment from Whop (covers fully-missed/out-of-order deliveries). Protected by `CRON_SECRET`.
+- Buyers see live order status at `/orders`.
+- Verified end-to-end: bad-sig 400, succeeded→PAID, duplicate deduped, out-of-order no-regress, and the race→outbox→cron heal.
 
 ## Buyer checkout (Chunk 4)
 

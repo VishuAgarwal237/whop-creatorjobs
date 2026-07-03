@@ -173,7 +173,7 @@ create policy payouts_seller_read on payouts
 -- Supabase configures sensible default privileges, but we grant explicitly so the
 -- migration is portable and the intent is auditable. RLS (above) is the row-level
 -- gate; these are the table-level privileges it sits on top of.
-grant usage on schema public to anon, authenticated;
+grant usage on schema public to anon, authenticated, service_role;
 -- users manage their own identity + a seller's own catalog
 grant select, insert, update, delete on sellers, buyers, listings to authenticated;
 -- orders/payouts are readable by participants; writes happen via the service role
@@ -182,3 +182,6 @@ grant select on orders, payouts to authenticated;
 grant select on listings to anon;
 -- webhook_events + outbox_jobs: intentionally NO grants to anon/authenticated
 -- (service role only — it bypasses RLS).
+-- the service role (webhook worker, cron, order writes) needs full table access;
+-- it also bypasses RLS.
+grant all on all tables in schema public to service_role;

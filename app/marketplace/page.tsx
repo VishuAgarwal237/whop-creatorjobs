@@ -21,9 +21,14 @@ export default async function MarketplacePage() {
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">CreatorJobs marketplace</h1>
-        <Link href="/" className="text-sm text-gray-500 underline">
-          ← Home
-        </Link>
+        <div className="flex gap-4 text-sm">
+          <Link href="/orders" className="text-blue-600 underline">
+            My orders
+          </Link>
+          <Link href="/" className="text-gray-500 underline">
+            ← Home
+          </Link>
+        </div>
       </header>
 
       {(listings ?? []).length === 0 ? (
