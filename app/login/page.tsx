@@ -1,3 +1,4 @@
+import { Container, Card, Field, Notice, btn, inputCls } from "@/components/ui";
 import { signIn, signUp } from "./actions";
 
 export default async function LoginPage({
@@ -8,58 +9,40 @@ export default async function LoginPage({
   const { error, next } = await searchParams;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold">CreatorJobs</h1>
-        <p className="text-sm text-gray-500">Sign in as a seller to onboard and get paid.</p>
-      </div>
+    <Container size="sm" className="py-16">
+      <Card>
+        <h1 className="text-xl font-bold tracking-tight">Sign in to CreatorJobs</h1>
+        <p className="mt-1 text-sm text-muted">Buy work, or onboard as a seller and get paid.</p>
 
-      {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-      ) : null}
+        {error ? (
+          <div className="mt-4">
+            <Notice kind="error">{error}</Notice>
+          </div>
+        ) : null}
 
-      <form className="flex flex-col gap-3">
-        <input type="hidden" name="next" value={next ?? ""} />
-        <label className="flex flex-col gap-1 text-sm">
-          Email
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="you+seller@gmail.com"
-            className="rounded-md border px-3 py-2"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Password
-          <input
-            name="password"
-            type="password"
-            required
-            minLength={6}
-            className="rounded-md border px-3 py-2"
-          />
-        </label>
-        <div className="flex gap-2">
-          <button
-            formAction={signIn}
-            className="flex-1 rounded-md bg-black px-3 py-2 text-sm font-medium text-white"
-          >
-            Sign in
-          </button>
-          <button
-            formAction={signUp}
-            className="flex-1 rounded-md border px-3 py-2 text-sm font-medium"
-          >
-            Sign up
-          </button>
-        </div>
-      </form>
+        <form className="mt-5 flex flex-col gap-4">
+          <input type="hidden" name="next" value={next ?? ""} />
+          <Field label="Email">
+            <input name="email" type="email" required placeholder="you+seller@gmail.com" className={inputCls} />
+          </Field>
+          <Field label="Password">
+            <input name="password" type="password" required minLength={6} placeholder="••••••••" className={inputCls} />
+          </Field>
+          <div className="flex gap-2">
+            <button formAction={signIn} className={btn("dark", "flex-1")}>
+              Sign in
+            </button>
+            <button formAction={signUp} className={btn("outline", "flex-1")}>
+              Create account
+            </button>
+          </div>
+        </form>
 
-      <p className="text-xs text-gray-400">
-        Tip: use a real-MX email (e.g. a gmail address) — Whop rejects domains that
-        can&apos;t receive mail when creating a connected account.
-      </p>
-    </main>
+        <p className="mt-4 text-xs leading-relaxed text-muted">
+          Use a real-MX email (e.g. gmail) — Whop rejects domains that can&apos;t receive mail
+          when creating a connected account.
+        </p>
+      </Card>
+    </Container>
   );
 }

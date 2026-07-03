@@ -1,15 +1,10 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { Container, Card, StatusBadge, btn } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Post-checkout return page. IMPORTANT (§12): `status=success` from the embed is
- * NOT authoritative — the order only moves to PAID when the verified
- * `payment.succeeded` webhook is processed (Chunk 5). Here we just show the
- * submitted state and the current order status from our DB.
- */
 export default async function CheckoutReturnPage({
   params,
   searchParams,
@@ -35,33 +30,37 @@ export default async function CheckoutReturnPage({
   const failed = status === "error";
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-4 p-6">
-      <h1 className="text-2xl font-semibold">
-        {failed ? "Payment not completed" : "Payment submitted"}
-      </h1>
-
-      {failed ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          The checkout reported an error. You can try again from the listing.
+    <Container size="sm" className="py-16">
+      <Card>
+        <div
+          className="flex h-12 w-12 items-center justify-center rounded-full text-2xl"
+          style={{ background: failed ? "#fee2e2" : "#dcfce7" }}
+        >
+          {failed ? "✕" : "✓"}
+        </div>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight">
+          {failed ? "Payment not completed" : "Payment submitted"}
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
+          {failed
+            ? "The checkout reported an error. You can try again from the listing."
+            : "We're confirming your payment with Whop. Your order is marked PAID only after the verified payment.succeeded webhook — never from this redirect alone."}
         </p>
-      ) : (
-        <p className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
-          Thanks! We&apos;re confirming your payment with Whop. The order is marked{" "}
-          <strong>PAID</strong> only after the verified <code>payment.succeeded</code> webhook
-          arrives (Chunk 5) — never from this redirect alone.
-        </p>
-      )}
 
-      <div className="rounded-lg border p-4 text-sm">
-        <div>Order: {order.id}</div>
-        <div>Current status: <strong>{order.status}</strong></div>
-      </div>
+        <div className="mt-5 flex items-center justify-between rounded-xl bg-surface px-4 py-3 text-sm">
+          <span className="font-mono text-muted">{order.id.slice(0, 8)}</span>
+          <StatusBadge status={order.status} />
+        </div>
 
-      <div className="flex gap-4 text-sm">
-        <Link href="/marketplace" className="text-blue-600 underline">
-          ← Back to marketplace
-        </Link>
-      </div>
-    </main>
+        <div className="mt-5 flex gap-2">
+          <Link href="/orders" className={btn("dark", "flex-1")}>
+            View my orders
+          </Link>
+          <Link href="/marketplace" className={btn("outline", "flex-1")}>
+            Keep browsing
+          </Link>
+        </div>
+      </Card>
+    </Container>
   );
 }
