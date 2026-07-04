@@ -45,16 +45,6 @@ cp .env.example .env.local   # fill in WHOP_API_KEY and Supabase keys
 npm run dev                  # http://localhost:3000
 ```
 
-Smoke test (Chunk 0):
-
-```bash
-# quick standalone check against whichever env WHOP_BASE_URL points at
-set -a; . ./.env.local; set +a
-node scripts/smoke.mjs
-# or, with the app running:
-curl -s localhost:3000/api/health | jq
-```
-
 ## Stable vs Beta API
 
 Uses the Beta API (`Api-Version-Date` pinned) where available — products/plans (create,
