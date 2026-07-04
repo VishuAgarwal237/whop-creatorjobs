@@ -38,7 +38,7 @@ The brief asked me to lean on the Experimental (Beta) API and to flag anywhere I
 | `products.update()` / `plans.update()` | `PATCH /products/{id}` · `PATCH /plans/{id}` | edit a listing (title, description, price, visibility) | Beta |
 | `products.delete()` / `plans.delete()` | `DELETE /products/{id}` · `DELETE /plans/{id}` | delete a listing (best-effort catalog cleanup) | Beta |
 | `checkoutConfigurations.create()` | `POST /checkout-configurations` | buyer checkout session | Beta |
-| `ledgerAccounts.retrieve()` | `GET /ledger_accounts/{id}` | payout readiness and balance | Beta |
+| `ledgerAccounts.retrieve()` | `GET /ledger_accounts/{id}` | payout readiness and balance | Stable (the Ledger Accounts resource is under the standard reference; the Beta "Ledgers → List Financial Activity" is a separate endpoint I do not call) |
 | `transfers.create()` | `POST /transfers` | seller payout (production) | Beta |
 | `companies.create()` | `POST /companies` | seller connected account | Stable (standard reference, no Beta page) |
 | `accountLinks.create()` | `POST /account-links` | hosted KYC and payout portal | Stable (standard reference, no Beta page) |
@@ -50,7 +50,9 @@ The brief asked me to lean on the Experimental (Beta) API and to flag anywhere I
 | `payoutMethods.list()` | `GET /payout_methods` | seller Payout setup panel — connected methods | Stable (no Beta page) |
 | `webhooks.unwrap()` | Standard Webhooks verify | verifying and receiving Whop webhooks | Stable (documented under standard reference) |
 
-A couple of notes so nobody reads too much into that table. First, I never actually call a memberships endpoint, I only read the `membership` field that already comes back on the payment object, so there is no separate membership API in play. Second, the Stable calls I could not avoid are the payment reads and the webhook verification, because those two sit right on the path where the webhook tells me something happened and the API tells me the truth, and there is no Beta version of either. The connected-account create and the KYC link are also Stable, because Whop only documents those under the standard reference.
+A couple of notes so nobody reads too much into that table. First, I never actually call a memberships endpoint, I only read the `membership` field that already comes back on the payment object, so there is no separate membership API in play. Second, the calls that necessarily sit on Stable are the ones that have no Beta equivalent I could have reached for instead, and that covers the payment reads together with refund and retry, the ledger-account read, the payout-account and payout-method reads, the connected-account create, the hosted KYC link, and the webhook verification. Two of those are worth spelling out so the classification is honest. The Beta "Ledgers → List Financial Activity" endpoint is a genuinely different thing from the ledger-account retrieve I rely on for approval status and balance, so it is not a drop-in swap and the retrieve stays on Stable. And the connected-account create goes through the SDK's `companies.create`, which is the older path, whereas the Beta "Accounts" resource also creates connected accounts and could probably take its place in a later pass.
+
+One more bit of honesty on how I confirmed all this: Whop's public docs do not spell the split out on a normal page, and the getting-started page does not mention stability tiers at all. The Experimental-versus-Stable distinction lives in the "Experimental" dropdown in the docs UI, which is exactly the toggle the brief points at, so the source of truth for which resource is Beta is which side of that dropdown its `/api-reference/` page sits on rather than anything I could re-derive from a single fetched page.
 
 ## Things I would want to confirm with Whop
 
