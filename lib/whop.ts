@@ -31,11 +31,24 @@ export const WHOP_PLATFORM_COMPANY_ID = process.env.WHOP_PLATFORM_COMPANY_ID ?? 
 /** Public base URL, for building Whop return/refresh redirect links. */
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+/**
+ * The Standard Webhooks verifier (used by `webhooks.unwrap`) base64-DECODES the
+ * secret before using it as the HMAC key. Whop's dashboard secret is a raw
+ * `ws_...` token, which is NOT valid base64 — passing it straight through throws
+ * "Base64Coder: incorrect characters for decoding" and every webhook 400s. So we
+ * base64-ENCODE the secret when it isn't already base64 (a base64 secret, e.g.
+ * local dev, passes through untouched).
+ */
+export function toWebhookKey(secret: string | null | undefined): string | null {
+  if (!secret) return null;
+  const s = secret.trim();
+  const looksBase64 = s.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(s);
+  return looksBase64 ? s : Buffer.from(s).toString("base64");
+}
+
 export const whop = new Whop({
   apiKey: process.env.WHOP_API_KEY,
-  // The Standard Webhooks verifier expects the base64 secret; the SDK reads
-  // WHOP_WEBHOOK_SECRET by default and passes it straight through.
-  webhookKey: process.env.WHOP_WEBHOOK_SECRET ?? null,
+  webhookKey: toWebhookKey(process.env.WHOP_WEBHOOK_SECRET),
   baseURL: WHOP_API_BASE,
   defaultHeaders: { "Api-Version-Date": WHOP_API_VERSION_DATE },
 });
