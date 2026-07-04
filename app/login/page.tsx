@@ -1,42 +1,23 @@
-import { Container, Card, Field, Notice, btn, inputCls } from "@/components/ui";
-import { signIn, signUp } from "./actions";
+import { Container, Card } from "@/components/ui";
+import { AuthForm } from "./AuthForm";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; next?: string; mode?: string }>;
 }) {
-  const { error, next } = await searchParams;
+  const { error, next, mode } = await searchParams;
+  const initialMode = mode === "signup" ? "signup" : "signin";
 
   return (
     <Container size="sm" className="py-16">
       <Card>
-        <h1 className="text-xl font-bold tracking-tight">Sign in to CreatorJobs</h1>
+        <h1 className="text-xl font-bold tracking-tight">Welcome to CreatorJobs</h1>
         <p className="mt-1 text-sm text-muted">Buy work, or onboard as a seller and get paid.</p>
 
-        {error ? (
-          <div className="mt-4">
-            <Notice kind="error">{error}</Notice>
-          </div>
-        ) : null}
-
-        <form className="mt-5 flex flex-col gap-4">
-          <input type="hidden" name="next" value={next ?? ""} />
-          <Field label="Email">
-            <input name="email" type="email" required placeholder="you+seller@gmail.com" className={inputCls} />
-          </Field>
-          <Field label="Password">
-            <input name="password" type="password" required minLength={6} placeholder="••••••••" className={inputCls} />
-          </Field>
-          <div className="flex gap-2">
-            <button formAction={signIn} className={btn("dark", "flex-1")}>
-              Sign in
-            </button>
-            <button formAction={signUp} className={btn("outline", "flex-1")}>
-              Create account
-            </button>
-          </div>
-        </form>
+        <div className="mt-5">
+          <AuthForm error={error} next={next} initialMode={initialMode} />
+        </div>
 
         <p className="mt-4 text-xs leading-relaxed text-muted">
           Use a real-MX email (e.g. gmail) — Whop rejects domains that can&apos;t receive mail

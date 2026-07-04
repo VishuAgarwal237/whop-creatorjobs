@@ -67,14 +67,15 @@ export function PageHeader({
 }
 
 /** Button className helper — apply to <button> or <Link>. */
-export function btn(variant: "primary" | "dark" | "outline" | "ghost" = "primary", extra = "") {
+export function btn(variant: "primary" | "dark" | "outline" | "ghost" | "danger" = "primary", extra = "") {
   const base =
-    "inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
+    "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
   const variants: Record<string, string> = {
     primary: "text-white bg-[var(--whop-blue)] hover:bg-[var(--whop-blue-hover)]",
     dark: "text-white bg-foreground hover:bg-black",
     outline: "border border-border bg-white text-foreground hover:bg-surface",
     ghost: "text-muted hover:text-foreground",
+    danger: "border border-red-200 bg-white text-[var(--danger)] hover:bg-red-50",
   };
   return `${base} ${variants[variant]} ${extra}`;
 }

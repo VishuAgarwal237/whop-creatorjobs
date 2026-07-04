@@ -41,3 +41,15 @@ body {
 ::selection {
   background: color-mix(in srgb, var(--whop-orange) 22%, transparent);
 }
+
+/* Tailwind v4's Preflight drops the default pointer cursor on buttons, which
+   makes clickable controls feel inert. Restore it for enabled buttons. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
