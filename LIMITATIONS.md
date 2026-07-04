@@ -20,12 +20,11 @@ This first table covers both the documented sandbox limits (rows 1 to 4) and the
 
 ## What I actually mocked
 
-I want to be upfront about the two, and only two, spots where something is faked, because everything else is a real call:
+I want to be upfront about the two, and only two, spots where something is faked, because everything else along the way is a genuine call.
 
-* Payout transfers. As above, the final step where money would leave the platform is a stub in the sandbox, but every step leading up to it (the intent, the reserve hold, the dispute freeze, the idempotency, the ledger balance read) is real.
-* Webhook delivery. Whop cannot deliver a webhook to localhost, so to test the handler I signed my own payloads with the real Standard Webhooks secret and posted them at the endpoint, then let the reconciliation cron do its thing. The handler code itself is exactly what would run in production, and once this is deployed you just point a real sandbox webhook at the deployed URL, nothing in the code changes.
+The first of them is the payout transfer itself, where the final step that would move money off the platform is stubbed in the sandbox, and yet every step leading up to that point is entirely real, including recording the payout intent, holding it through the reserve window, freezing it on a dispute, keeping it idempotent, and reading the live ledger balance. The second is webhook delivery, which only became an issue because Whop cannot deliver a webhook to localhost, so to exercise the handler while I was building locally I signed my own payloads with the real Standard Webhooks secret and posted them at the endpoint before letting the reconciliation cron take over from there. Since the handler code is exactly what runs in production, deploying it was simply a matter of pointing a real sandbox webhook at the deployed URL, and that is in fact now wired up on the live build, so on the deployed version the webhook path runs for real rather than being simulated.
 
-Everything else is a real sandbox API call: creating connected accounts, generating the hosted KYC link, creating products and plans, creating checkout sessions, rendering the embedded checkout, pulling a payment back, and reading a ledger.
+Everything else is a real sandbox API call, and that covers creating connected accounts, generating the hosted KYC link, creating products and plans, creating checkout sessions, rendering the embedded checkout, pulling a payment back, and reading a ledger.
 
 ## Experimental (Beta) versus Stable API, and where I had to use Stable
 
@@ -55,11 +54,9 @@ A couple of notes so nobody reads too much into that table. First, I never actua
 
 ## Things I would want to confirm with Whop
 
-A few behaviors are genuinely not written down anywhere I could find, and they matter for real money, so these are the questions I would take back to Whop before going live:
+A few behaviors are genuinely not written down anywhere I could find, and because they matter for real money these are the questions I would take back to Whop before going live.
 
-* What actually happens on a clawback. If a buyer gets refunded or wins a dispute after the seller has already been paid out, does the seller's balance go negative, does Whop pull it back on its own, or does the platform eat it? I guard against this with a reserve window and a freeze on dispute, but the real policy is not documented.
-* How `application_fee_amount` works on a connected-account checkout, both the units it expects and who is on the hook for fees and disputes.
-* The minimum and maximum amounts for transfers and withdrawals, and what happens when the origin ledger does not have enough in it.
+The first is what actually happens on a clawback, because if a buyer is refunded or wins a dispute after the seller has already been paid out, I do not know for certain whether the seller's balance is allowed to go negative, whether Whop pulls the money back on its own, or whether the platform ends up eating it, and while I guard against that today with a reserve window and a freeze on dispute, the underlying policy is not something I could find documented. The second is how `application_fee_amount` actually behaves on a connected-account checkout, both in terms of the units it expects and in terms of who is ultimately on the hook for the fees and for any disputes. The third is where the minimum and maximum amounts sit for transfers and withdrawals, and what happens when the origin ledger simply does not hold enough to cover one of them.
 
 ## Deploying this sandbox build
 
