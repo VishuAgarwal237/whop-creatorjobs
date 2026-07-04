@@ -98,7 +98,7 @@ export default async function SellerPage({
                 <input name="title" placeholder="e.g. Jane's Design Studio" className={inputCls} />
               </Field>
             ) : null}
-            <button className={btn("dark", "self-start")}>
+            <button className={btn("primary", "self-start")}>
               {hasCompany ? "Open Whop onboarding again" : "Create connected account & start KYC"}
             </button>
           </form>

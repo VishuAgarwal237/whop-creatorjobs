@@ -17,8 +17,8 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 | Buyer checkout | `/listing/[id]` → `/checkout` | `checkout-configurations` + `<WhopCheckoutEmbed>` |
 | Payment confirmation | `/api/webhooks/whop` | `webhooks.unwrap` + `payments.retrieve` |
 | Order state | `/orders`, `/admin` | payment status → state machine |
-| Seller payout setup | `/seller` (earnings) | `ledger_accounts`, `transfers` |
-| Marketplace dashboard | `/admin` | `payments`, `withdrawals`, `ledger_accounts` |
+| Seller payout setup | `/seller` (payout + earnings) | `ledger_accounts`, `payout_accounts`, `payout_methods`, `transfers` |
+| Marketplace dashboard | `/admin` | `payments` (retrieve + `refund`/`retry`), `ledger_accounts` |
 
 ## Build status
 
@@ -39,7 +39,8 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 ## Ops dashboard (Chunk 7 — Scenario 4)
 
 - `/admin` (service role; gated by `ADMIN_EMAILS` allowlist) shows it all on one screen:
-  **orders** with our status + **live `GET /payments/{id}` status/substatus** and a mismatch flag + per-row **re-check**; **payouts** (status, transfer id, error); **webhook delivery** (event, signature verified, processed, error).
+  **orders** with our status + **live `GET /payments/{id}` status/substatus** and a mismatch flag; **payouts** (status, transfer id, error); **webhook delivery** (event, signature verified, processed, error); an **order-activity** audit trail (every state transition + reason + source).
+- **Per-order ops actions** (act, don't just observe): **re-check** (re-derive from Whop truth), **refund** (`payments.refund` on captured orders), and **retry** (`payments.retry` on failed orders). Each just calls Whop — the resulting webhook advances the order, keeping Whop the source of truth.
 - A **Run reconciliation** button triggers the same idempotent sweep as the cron (`lib/ops.ts` → outbox drain + stuck-order heal + payout release).
 - Answers the customer's ask: "one dashboard showing buyer payment, order state, seller payout status, webhook delivery, and errors."
 
@@ -49,6 +50,7 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 - The cron **releases** payouts only after a **reserve/hold window** (clawback safety), and **never** while the order is `DISPUTED`/`REFUNDED` (frozen → `failed`). Real releases require seller readiness (Verification `approved` + payout account `connected`).
 - **Sandbox**: real payouts are disabled (`transfers.create` → 400 *"Sends are only supported from an Ethereum wallet"*), so releases are **stubbed** (`status: stubbed`) behind `PAYOUTS_ENABLED=false`; production runs `whop.transfers.create` platform → seller ledger with `idempotence_key`.
 - Sellers see payouts + live Whop ledger balance on `/seller`.
+- **Payout setup panel** (`/seller`): surfaces the live payout-account status (`payout_accounts.retrieve` → `connected` / `pending_verification` / `action_required` / `not_started`…) and any connected payout methods (`payout_methods.list`), so "onboarded but can't withdraw" (Scenario 2) is self-diagnosable — and the sandbox reason reads as expected, not a bug.
 - Verified end-to-end: intent idempotency, reserve hold, release→stubbed, dispute→frozen.
 
 ## Webhooks & order state (Chunk 5)
@@ -60,6 +62,13 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 - Buyers see live order status at `/orders`.
 - Verified end-to-end: bad-sig 400, succeeded→PAID, duplicate deduped, out-of-order no-regress, and the race→outbox→cron heal.
 
+## Seller listings (Chunk 3)
+
+- `/seller/listings`: a seller **creates** a listing → it's mirrored to Whop as a **product + one-time plan** (`products.create` + `plans.create`, under the platform company; see LIMITATIONS row 5). Active listings appear on the public `/marketplace`.
+- **Edit** (inline): change title, description, price, or status (active/archived) → synced to the Whop **product** (`products.update`, incl. visibility) and **plan** (`plans.update`, incl. `initial_price`) so checkout charges the new amount.
+- **Delete**: removes the mirrored Whop **plan + product** (`plans.delete` / `products.delete`, best-effort), then deletes our row — or **archives** it (kept off the marketplace) if the listing already has orders, so buyer/order history stays intact.
+- Scoped by RLS: a seller manages only their own listings.
+
 ## Buyer checkout (Chunk 4)
 
 - On a listing, **Buy now** (buyer must be signed in) creates the `orders` row **first** (`PENDING_PAYMENT`) — so a webhook can never beat the order into existence (§X1) — then a Whop **checkout session** carrying `metadata.order_id`.
@@ -69,7 +78,7 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 
 ## Seller onboarding (Chunk 2)
 
-- `/login` — Supabase email auth (sign in / sign up). `/seller` — onboarding dashboard (auth-guarded).
+- `/login` — Supabase email auth with a **tabbed Sign in / Create account** form (one primary button, errors return to the correct tab). `/seller` — onboarding dashboard (auth-guarded).
 - On start: ensure a `sellers` row (dedupe-first), create a **connected account** (`companies.create` with `parent_company_id`), then mint a hosted KYC link (`account-links`).
 - **`account-links` requires https return/refresh URLs**, so hosted KYC runs on the deployed (https) build; on local http the connected account still creates and we skip the redirect.
 - Readiness (`kyc_status`, `payout_ready`) is **always re-checked against Whop's ledger** (`payments_approval_status` + payout-account `connected`) — never inferred from the return redirect. In sandbox this stays `pending` (payouts disabled) — the real Scenario 2.
@@ -88,6 +97,10 @@ To test in sandbox, create a sandbox key at `https://sandbox.whop.com/dashboard/
 and set it in `.env.local`. To run against production instead, set
 `WHOP_BASE_URL=https://api.whop.com/api/v1` (note: real money + connected-account creation
 needs Platforms API access, which is invite-only).
+
+## UI / design system
+
+A small shared kit (`components/ui.tsx`) keeps the surface consistent: one **primary action color** (blue) for the main action on every page, `outline` for secondary, `danger` (red) for destructive (delete/refund); brand **orange** is reserved for identity (logo, step numbers), never an action. A single `StatusBadge` renders every state — order, listing, KYC, payout, and payout-account statuses — from one style map, so a status looks the same wherever it appears. Global base CSS restores the pointer cursor on buttons (Tailwind v4 drops it).
 
 ## Setup
 
@@ -126,5 +139,8 @@ Clients: `lib/supabase/server.ts` (user session, RLS), `lib/supabase/client.ts`
 
 ## Stable vs Beta API
 
-Uses the Beta API (`Api-Version-Date` pinned) where available. Documented
-**Stable-only** fallbacks: `GET /payments/{id}`, memberships, and webhooks.
+Uses the Beta API (`Api-Version-Date` pinned) where available — products/plans (create,
+update, delete), checkout-configurations, ledger-accounts, transfers. Documented
+**Stable-only** calls: `payments.retrieve/list/refund/retry`, `payout_accounts`,
+`payout_methods`, connected-account create, `account-links`, and webhook verification.
+Full call-by-call breakdown in [LIMITATIONS.md](./LIMITATIONS.md).

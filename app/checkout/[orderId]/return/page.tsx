@@ -53,7 +53,7 @@ export default async function CheckoutReturnPage({
         </div>
 
         <div className="mt-5 flex gap-2">
-          <Link href="/orders" className={btn("dark", "flex-1")}>
+          <Link href="/orders" className={btn("primary", "flex-1")}>
             View my orders
           </Link>
           <Link href="/marketplace" className={btn("outline", "flex-1")}>

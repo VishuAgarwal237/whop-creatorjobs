@@ -36,6 +36,8 @@ The brief asked me to lean on the Experimental (Beta) API and to flag anywhere I
 | `accounts.me()` | `GET /accounts/me` | auth and environment health check | Beta |
 | `products.create()` | `POST /products` | listing to product | Beta |
 | `plans.create()` | `POST /plans` | listing to one-time plan | Beta |
+| `products.update()` / `plans.update()` | `PATCH /products/{id}` · `PATCH /plans/{id}` | edit a listing (title, description, price, visibility) | Beta |
+| `products.delete()` / `plans.delete()` | `DELETE /products/{id}` · `DELETE /plans/{id}` | delete a listing (best-effort catalog cleanup) | Beta |
 | `checkoutConfigurations.create()` | `POST /checkout-configurations` | buyer checkout session | Beta |
 | `ledgerAccounts.retrieve()` | `GET /ledger_accounts/{id}` | payout readiness and balance | Beta |
 | `transfers.create()` | `POST /transfers` | seller payout (production) | Beta |
@@ -43,6 +45,10 @@ The brief asked me to lean on the Experimental (Beta) API and to flag anywhere I
 | `accountLinks.create()` | `POST /account-links` | hosted KYC and payout portal | Stable (standard reference, no Beta page) |
 | `payments.retrieve()` | `GET /payments/{id}` | payment confirmation, the API-is-truth read | Stable (no Beta variant) |
 | `payments.list()` | `GET /payments` | reconciliation, finding a payment by checkout config | Stable (no Beta variant) |
+| `payments.refund()` | `POST /payments/{id}/refund` | refund an order from the ops dashboard | Stable (no Beta variant) |
+| `payments.retry()` | `POST /payments/{id}/retry` | retry a failed payment from the ops dashboard | Stable (no Beta variant) |
+| `payoutAccounts.retrieve()` | `GET /payout_accounts/{id}` | seller Payout setup panel — account/KYC status | Stable (no Beta page) |
+| `payoutMethods.list()` | `GET /payout_methods` | seller Payout setup panel — connected methods | Stable (no Beta page) |
 | `webhooks.unwrap()` | Standard Webhooks verify | verifying and receiving Whop webhooks | Stable (documented under standard reference) |
 
 A couple of notes so nobody reads too much into that table. First, I never actually call a memberships endpoint, I only read the `membership` field that already comes back on the payment object, so there is no separate membership API in play. Second, the Stable calls I could not avoid are the payment reads and the webhook verification, because those two sit right on the path where the webhook tells me something happened and the API tells me the truth, and there is no Beta version of either. The connected-account create and the KYC link are also Stable, because Whop only documents those under the standard reference.

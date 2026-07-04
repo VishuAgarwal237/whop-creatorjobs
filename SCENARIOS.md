@@ -26,6 +26,7 @@ These are the four scenarios from the brief. For each one I have kept the fields
 **What I would tell the customer.** "Getting through the onboarding screens is not the same thing as being payout ready. A withdrawal needs the ledger's approval status to be approved and a connected payout account, with the money actually available rather than pending or reserved. One more thing worth knowing: payouts are turned off in the Whop sandbox, so a sandbox seller will correctly sit at not-payout-ready, and that is expected, not a bug."
 
 **Internal action.**
+* Open the seller's `/seller` → Payout setup panel, which surfaces the live payout-account status (`payout_accounts.retrieve`, e.g. connected / pending_verification / action_required / not_started) and any attached payout methods (`payout_methods.list`) right in the product, so I can see which of the two gates is failing without leaving the app.
 * Pull `GET /ledger_accounts/{biz}` and check payments_approval_status and the payout account status, plus the balance split between available, pending, and reserved.
 * Make sure a payout method is actually attached, and if KYC is not finished, hand the seller a fresh account-links link for the payouts portal.
 * Confirm which environment we are in, because the sandbox can never produce a payout-ready seller, so this has to be validated in production.
@@ -57,9 +58,9 @@ These are the four scenarios from the brief. For each one I have kept the fields
 
 **Issue type.** Observability, and it is solved on the product side.
 
-**What I would tell the customer.** "That is exactly the /admin dashboard. One screen shows the orders with our status next to the live Whop payment status, with a flag when they disagree and a re-check button per order, the payout status with the transfer id and any hold or freeze reason, and the webhook delivery with whether each event verified, processed, and errored. There are counters across the top and a Run reconciliation button. On top of that we emit structured JSON logs for the whole money path, so it all lands in your log tooling for search and alerting."
+**What I would tell the customer.** "That is exactly the /admin dashboard. One screen shows the orders with our status next to the live Whop payment status, with a flag when they disagree, the payout status with the transfer id and any hold or freeze reason, the webhook delivery with whether each event verified, processed, and errored, and an order-activity trail of every state transition with its reason and source. It is not just read-only: each order has per-row actions to re-check it against Whop, refund it (`payments.refund`), or retry a failed payment (`payments.retry`) — the resulting webhook then advances the order, so Whop stays the source of truth. There are counters across the top and a Run reconciliation button, and we emit structured JSON logs for the whole money path so it all lands in your log tooling for search and alerting."
 
-**Internal action.** Ship /admin (service role, gated by an ADMIN_EMAILS allowlist) backed by webhook_events plus live Whop reads (payments, ledger_accounts), where the reconcile button runs the same idempotent sweep as the cron.
+**Internal action.** Ship /admin (service role, gated by an ADMIN_EMAILS allowlist) backed by webhook_events plus live Whop reads (payments, ledger_accounts), where the per-order refund/retry/re-check actions call Whop and the reconcile button runs the same idempotent sweep as the cron.
 
 **Urgency.** Medium. It unblocks ops but it is not a live money incident.
 

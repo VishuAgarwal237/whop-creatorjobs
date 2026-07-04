@@ -4,7 +4,7 @@ import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { whop } from "@/lib/whop";
 import { Container, Card, PageHeader, StatusBadge, Notice, btn, th, td } from "@/components/ui";
 import type { OrderStatus } from "@/lib/database.types";
-import { runReconciliation, recheckOrder, refundPayment } from "./actions";
+import { runReconciliation, recheckOrder, refundPayment, retryPayment } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +26,9 @@ function Kpi({ label, value, tone }: { label: string; value: string | number; to
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ refunded?: string; error?: string }>;
+  searchParams: Promise<{ refunded?: string; retried?: string; error?: string }>;
 }) {
-  const { refunded, error } = await searchParams;
+  const { refunded, retried, error } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/admin");
   if (!isAdminEmail(user.email)) {
@@ -90,7 +90,7 @@ export default async function AdminPage({
         subtitle="Buyer payment · order state · payout status · webhook delivery + errors — one screen."
         action={
           <form action={runReconciliation}>
-            <button className={btn("dark")}>Run reconciliation</button>
+            <button className={btn("primary")}>Run reconciliation</button>
           </form>
         }
       />
@@ -98,6 +98,11 @@ export default async function AdminPage({
       {refunded ? (
         <div className="mb-4">
           <Notice kind="success">Refund requested ✅ — the order flips to REFUNDED when Whop&apos;s refund webhook arrives.</Notice>
+        </div>
+      ) : null}
+      {retried ? (
+        <div className="mb-4">
+          <Notice kind="success">Payment retried ✅ — the order advances when Whop&apos;s next payment webhook arrives.</Notice>
         </div>
       ) : null}
       {error ? (
@@ -149,6 +154,12 @@ export default async function AdminPage({
                             <input type="hidden" name="order_id" value={o.id} />
                             <button className="cursor-pointer text-xs font-medium text-[var(--whop-blue)] hover:underline">re-check</button>
                           </form>
+                          {o.whop_payment_id && o.status === "FAILED" ? (
+                            <form action={retryPayment}>
+                              <input type="hidden" name="order_id" value={o.id} />
+                              <button className="cursor-pointer text-xs font-medium text-[var(--whop-blue)] hover:underline">retry</button>
+                            </form>
+                          ) : null}
                           {o.whop_payment_id && REFUNDABLE.includes(o.status) ? (
                             <form action={refundPayment}>
                               <input type="hidden" name="order_id" value={o.id} />

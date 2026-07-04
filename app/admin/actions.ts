@@ -60,3 +60,28 @@ export async function refundPayment(formData: FormData) {
   if (err) redirect(`/admin?error=${encodeURIComponent(err)}`);
   redirect("/admin?refunded=1");
 }
+
+/**
+ * Retry a failed payment from the ops dashboard. Re-attempts the original charge;
+ * the resulting payment webhook advances the order if it succeeds.
+ */
+export async function retryPayment(formData: FormData) {
+  await requireAdmin();
+  const orderId = String(formData.get("order_id") ?? "");
+  const admin = createSupabaseAdmin();
+  const { data: order } = await admin
+    .from("orders")
+    .select("id, whop_payment_id")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order?.whop_payment_id) redirect(`/admin?error=${encodeURIComponent("No Whop payment on this order to retry.")}`);
+
+  let err: string | null = null;
+  try {
+    await whop.payments.retry(order!.whop_payment_id!);
+  } catch (e) {
+    err = e instanceof Whop.APIError ? `(${e.status}) ${e.message}` : "Retry request failed.";
+  }
+  if (err) redirect(`/admin?error=${encodeURIComponent(err)}`);
+  redirect("/admin?retried=1");
+}

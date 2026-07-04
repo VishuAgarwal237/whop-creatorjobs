@@ -45,7 +45,7 @@ export function AuthForm({ error, next, initialMode }: { error?: string; next?: 
         <Field label="Password" hint={isSignup ? "At least 6 characters." : undefined}>
           <input name="password" type="password" required minLength={6} placeholder="••••••••" className={inputCls} />
         </Field>
-        <button formAction={isSignup ? signUp : signIn} className={btn("dark")}>
+        <button formAction={isSignup ? signUp : signIn} className={btn("primary")}>
           {isSignup ? "Create account" : "Sign in"}
         </button>
       </form>

@@ -79,7 +79,7 @@ export default async function SellerListingsPage({
               <Field label="Price (USD)">
                 <input name="price" type="number" step="0.01" min="0.5" placeholder="25.00" className={`${inputCls} max-w-40`} />
               </Field>
-              <button className={btn("dark", "self-start")}>Create listing</button>
+              <button className={btn("primary", "self-start")}>Create listing</button>
             </form>
           </Card>
         )}
@@ -140,7 +140,7 @@ export default async function SellerListingsPage({
                         </select>
                       </Field>
                       <div className="sm:col-span-2">
-                        <button className={btn("dark", "self-start")}>Save changes</button>
+                        <button className={btn("primary", "self-start")}>Save changes</button>
                       </div>
                     </form>
                   </details>
