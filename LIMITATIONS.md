@@ -29,14 +29,25 @@ One table: the limitation/finding, what we did about it, and what changes in pro
 
 ## Experimental (Beta) vs Stable API — where we used Stable
 
-The brief asked us to prefer the **Experimental (Beta)** API and flag Stable fallbacks. Mechanism: there is **no separate base URL** — the `@whop/sdk` client is pinned via the `Api-Version-Date` header, so every call gets the latest (experimental) request/response shapes. Whop's "Beta/Stable" split is a **docs-navigation distinction** (which resources have a `/api-reference/beta/` entry). Classified from Whop's Beta API overview + the doc paths of the resources we call:
+The brief asked us to prefer the **Experimental (Beta)** API and flag Stable fallbacks. Mechanism: there is **no separate base URL** — the `@whop/sdk` client is pinned via the `Api-Version-Date` header, so every call gets the latest (experimental) request/response shapes. Whop's "Beta/Stable" split is a **docs-navigation distinction** (which resources have a `/api-reference/beta/` entry). Per specific API call we make:
 
-- **On Beta** (listed in Whop's Beta overview): `products`, `plans`, `checkout-configurations`, `ledger-accounts`, `transfers`, `accounts`.
-- **On Stable** (documented under the standard reference, no Beta entry): `companies` (connected-account create), `account-links` (hosted KYC), **`payments.retrieve` / `payments.list`** (payment confirmation + reconciliation), **`webhooks`** (verify + receive).
+| SDK call | REST endpoint | Used for | Surface |
+|---|---|---|---|
+| `accounts.me()` | `GET /accounts/me` | auth / env health check | **Beta** ✅ |
+| `products.create()` | `POST /products` | listing → product | **Beta** ✅ |
+| `plans.create()` | `POST /plans` | listing → one-time plan | **Beta** ✅ |
+| `checkoutConfigurations.create()` | `POST /checkout-configurations` | buyer checkout session | **Beta** ✅ |
+| `ledgerAccounts.retrieve()` | `GET /ledger_accounts/{id}` | payout readiness + balance | **Beta** ✅ |
+| `transfers.create()` | `POST /transfers` | seller payout (prod) | **Beta** ✅ |
+| `companies.create()` | `POST /companies` | seller connected account | **Stable** ⚠️ (standard reference, no Beta entry) |
+| `accountLinks.create()` | `POST /account-links` | hosted KYC / payout portal | **Stable** ⚠️ (standard reference, no Beta entry) |
+| `payments.retrieve()` | `GET /payments/{id}` | payment confirmation (webhook = signal, API = truth) | **Stable** ⚠️ (no Beta variant) |
+| `payments.list()` | `GET /payments` | reconciliation (find payment by checkout config) | **Stable** ⚠️ (no Beta variant) |
+| `webhooks.unwrap()` | (Standard Webhooks verify) | verify + receive Whop webhooks | **Stable** ⚠️ (documented under standard reference) |
 
 Notes:
 - We do **not** call a memberships endpoint — we only read the `membership` field embedded on the Payment/webhook object.
-- The unavoidable Stable touchpoints are **payment retrieve/list** and **webhooks** — they sit on the "webhook = signal, API = truth" confirmation path, which has no Beta equivalent.
+- The unavoidable Stable touchpoints are **`payments.retrieve`/`payments.list`** and **`webhooks.unwrap`** — they sit on the "webhook = signal, API = truth" confirmation path, which has no Beta equivalent. `companies.create` and `account-links.create` are also Stable (Whop documents them only under the standard reference).
 
 ## Open questions to confirm with Whop (genuinely undocumented)
 
