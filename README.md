@@ -7,7 +7,7 @@ payouts, and the ops dashboard.
 Stack: **Next.js 16 (App Router) + Supabase (Postgres/Auth/RLS) + Whop TS SDK (`@whop/sdk`)**.
 Design principle: **Whop is the source of truth for money; our Postgres is a read-model + workflow layer.**
 
-**Submission:** [SCENARIOS.md](./SCENARIOS.md) (the four written answers) · [LIMITATIONS.md](./LIMITATIONS.md) (sandbox limits + mocks/adaptations) · [DEPLOY.md](./DEPLOY.md) (Vercel + cloud Supabase) · Loom (pending).
+**Submission:** [SCENARIOS.md](./SCENARIOS.md) (the four written answers) · [LIMITATIONS.md](./LIMITATIONS.md) (sandbox limits + mocks/adaptations) · [DEPLOY.md](./DEPLOY.md) (Vercel + cloud Supabase) · Loom 
 
 ### The six Whop-powered capabilities → where they live
 
@@ -24,7 +24,7 @@ Design principle: **Whop is the source of truth for money; our Postgres is a rea
 
 | Chunk | What | Status |
 |------|------|--------|
-| 0 | Scaffold + server-only Whop client + `/api/health` smoke test | ✅ done (see note) |
+| 0 | Scaffold + server-only Whop client + `/api/health` smoke test | ✅ done |
 | 1 | Supabase schema + Auth + RLS + typed clients | ✅ done, validated on real Postgres |
 | 2 | Seller onboarding — auth, connected account, KYC link, readiness re-check | ✅ done, verified end-to-end |
 | 3 | Listings — product + plan, public marketplace | ✅ done, verified end-to-end |
