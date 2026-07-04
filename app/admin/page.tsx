@@ -4,13 +4,15 @@ import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { whop } from "@/lib/whop";
 import { Container, Card, PageHeader, StatusBadge, Notice, btn, th, td } from "@/components/ui";
 import type { OrderStatus } from "@/lib/database.types";
-import { runReconciliation, recheckOrder } from "./actions";
+import { runReconciliation, recheckOrder, refundPayment } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
 const short = (s: string | null) => (s ? s.slice(0, 8) : "—");
 const PAID_PLUS: OrderStatus[] = ["PAID", "FULFILLED", "SETTLED", "REFUNDED", "DISPUTED"];
+// Refundable = money captured and not already reversed/disputed.
+const REFUNDABLE: OrderStatus[] = ["PAID", "FULFILLED", "SETTLED"];
 
 function Kpi({ label, value, tone }: { label: string; value: string | number; tone?: "danger" }) {
   return (
@@ -21,7 +23,12 @@ function Kpi({ label, value, tone }: { label: string; value: string | number; to
   );
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ refunded?: string; error?: string }>;
+}) {
+  const { refunded, error } = await searchParams;
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/admin");
   if (!isAdminEmail(user.email)) {
@@ -88,6 +95,17 @@ export default async function AdminPage() {
         }
       />
 
+      {refunded ? (
+        <div className="mb-4">
+          <Notice kind="success">Refund requested ✅ — the order flips to REFUNDED when Whop&apos;s refund webhook arrives.</Notice>
+        </div>
+      ) : null}
+      {error ? (
+        <div className="mb-4">
+          <Notice kind="error">{error}</Notice>
+        </div>
+      ) : null}
+
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Kpi label="Orders" value={ordersTotal.count ?? 0} />
         <Kpi label="Paid+" value={paidTotal.count ?? 0} />
@@ -126,10 +144,18 @@ export default async function AdminPage() {
                       <td className={`${td} text-muted`}>{l ? `${l.status ?? "—"} / ${l.substatus ?? "—"}` : "—"}</td>
                       <td className={`${td} font-mono text-muted`}>{short(o.whop_payment_id)}</td>
                       <td className={td}>
-                        <form action={recheckOrder}>
-                          <input type="hidden" name="order_id" value={o.id} />
-                          <button className="text-xs font-medium text-[var(--whop-blue)] hover:underline">re-check</button>
-                        </form>
+                        <div className="flex items-center gap-3">
+                          <form action={recheckOrder}>
+                            <input type="hidden" name="order_id" value={o.id} />
+                            <button className="cursor-pointer text-xs font-medium text-[var(--whop-blue)] hover:underline">re-check</button>
+                          </form>
+                          {o.whop_payment_id && REFUNDABLE.includes(o.status) ? (
+                            <form action={refundPayment}>
+                              <input type="hidden" name="order_id" value={o.id} />
+                              <button className="cursor-pointer text-xs font-medium text-[var(--danger)] hover:underline">refund</button>
+                            </form>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   );

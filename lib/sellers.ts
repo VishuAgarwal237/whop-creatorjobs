@@ -32,6 +32,42 @@ export async function computeReadiness(companyId: string): Promise<{
   }
 }
 
+/**
+ * Fetch the seller's payout setup from Whop for the /seller "Payout setup" panel
+ * (Scenario 2 — "onboarded but can't withdraw"). Best-effort: a fresh sandbox
+ * connected account often has no payout account/methods yet, which is exactly the
+ * state we want to surface rather than hide.
+ */
+export type PayoutMethodView = { id: string; label: string; isDefault: boolean; currency: string };
+export async function getPayoutDetail(companyId: string): Promise<{
+  accountStatus: string | null;
+  methods: PayoutMethodView[];
+}> {
+  let accountStatus: string | null = null;
+  let methods: PayoutMethodView[] = [];
+
+  try {
+    const acct = await whop.payoutAccounts.retrieve(companyId);
+    accountStatus = acct.status ?? null;
+  } catch {
+    // no payout account yet (expected for a fresh sandbox seller)
+  }
+
+  try {
+    const page = await whop.payoutMethods.list({ company_id: companyId });
+    methods = (page.data ?? []).map((m) => ({
+      id: m.id,
+      label: m.institution_name ?? m.nickname ?? m.account_reference ?? "Payout method",
+      isDefault: m.is_default,
+      currency: m.currency,
+    }));
+  } catch {
+    // no methods yet
+  }
+
+  return { accountStatus, methods };
+}
+
 /** Create a fresh hosted KYC/onboarding link for a connected account. */
 export async function createOnboardingLink(companyId: string): Promise<string | null> {
   const link = await whop.accountLinks.create({

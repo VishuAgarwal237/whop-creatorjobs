@@ -129,6 +129,13 @@ const STATUS_STYLES: Record<string, string> = {
   archived: "bg-gray-200 text-gray-700",
   pending: "bg-amber-100 text-amber-800",
   rejected: "bg-red-100 text-red-700",
+  // payout account calculated statuses
+  connected: "bg-green-100 text-green-800",
+  action_required: "bg-amber-100 text-amber-800",
+  pending_verification: "bg-amber-100 text-amber-800",
+  verification_failed: "bg-red-100 text-red-700",
+  disabled: "bg-gray-200 text-gray-700",
+  not_started: "bg-gray-100 text-gray-700",
 };
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {

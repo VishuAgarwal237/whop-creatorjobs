@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { computeReadiness } from "@/lib/sellers";
+import { computeReadiness, getPayoutDetail } from "@/lib/sellers";
 import { Container, Card, PageHeader, StatusBadge, Notice, Field, btn, inputCls } from "@/components/ui";
 import { startSellerOnboarding } from "./actions";
 
@@ -52,6 +52,7 @@ export default async function SellerPage({
     ? await supabase.from("payouts").select("id, amount_cents, status, created_at").order("created_at", { ascending: false })
     : { data: [] };
   const withdrawable = seller?.whop_company_id ? (await computeReadiness(seller.whop_company_id)).withdrawable : null;
+  const payoutDetail = seller?.whop_company_id ? await getPayoutDetail(seller.whop_company_id) : null;
 
   return (
     <Container>
@@ -106,6 +107,44 @@ export default async function SellerPage({
             readiness against Whop&apos;s ledger.
           </p>
         </Card>
+
+        {/* Payout setup (Scenario 2) */}
+        {hasCompany ? (
+          <Card>
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">Payout setup</h2>
+              <StatusBadge
+                status={payoutDetail?.accountStatus ?? "not_started"}
+                label={(payoutDetail?.accountStatus ?? "not started").replace(/_/g, " ")}
+              />
+            </div>
+            <p className="mt-1 text-xs text-muted">
+              Live from Whop&apos;s payout account (KYC + withdrawal readiness).
+            </p>
+            <ul className="mt-3 divide-y divide-border">
+              {(payoutDetail?.methods ?? []).length === 0 ? (
+                <li className="py-2.5 text-sm text-muted">
+                  No payout method connected yet — expected in sandbox, where payouts are disabled.
+                </li>
+              ) : (
+                payoutDetail!.methods.map((m) => (
+                  <li key={m.id} className="flex items-center justify-between py-2.5 text-sm">
+                    <span className="font-medium">
+                      {m.label}
+                      {m.isDefault ? <span className="ml-2 text-xs text-muted">(default)</span> : null}
+                    </span>
+                    <span className="text-xs uppercase text-muted">{m.currency}</span>
+                  </li>
+                ))
+              )}
+            </ul>
+            <p className="mt-2 text-xs text-muted">
+              Payout-ready needs <span className="font-medium">payments approved</span> AND a{" "}
+              <span className="font-medium">connected</span> payout account. A sandbox seller stays
+              not-ready by design (Scenario 2) — that&apos;s not a bug.
+            </p>
+          </Card>
+        ) : null}
 
         {/* Earnings */}
         <Card>
